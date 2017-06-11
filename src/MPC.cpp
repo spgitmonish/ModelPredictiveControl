@@ -314,7 +314,9 @@ mpc_output MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
 
   // Cost
   auto cost = solution.obj_value;
+#if DEBUG
   std::cout << "Cost " << cost << std::endl;
+#endif
 
   // Store the first actuator values for the next iteration to account for the lag
   prev_delta = solution.x[delta_start];
@@ -331,9 +333,10 @@ mpc_output MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   auto sol_x = solution.x;
 
   // Store the x and y values from the solution
-  // NOTE: .data() method of the class returns the pointer to the first element
-  vector<double> next_x_vals(sol_x.data() + x_start, sol_x.data() + y_start - 1);
-  vector<double> next_y_vals(sol_x.data() + y_start, sol_x.data() + psi_start - 1);
+  // NOTE: .data() method of the class returns the pointer to the first element.
+  //       Current (x,y) value is ignored & predicted (x, y) values are returned.
+  vector<double> next_x_vals(sol_x.data() + x_start + 1, sol_x.data() + y_start - 1);
+  vector<double> next_y_vals(sol_x.data() + y_start + 1, sol_x.data() + psi_start - 1);
   solution_to_return.pred_x_vals = next_x_vals;
   solution_to_return.pred_y_vals = next_y_vals;
 
