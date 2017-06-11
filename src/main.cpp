@@ -123,19 +123,14 @@ int main()
           // Calculate the new state
           auto vars = mpc.Solve(state, coeffs);
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
           // Set up the steering and throttle values
+          // NOTE: Both are in between [-1, 1] for the simulator
           steer_value = vars[0];
           throttle_value = vars[1];
 
           json msgJson;
           // NOTE: Divide by deg2rad(25) before you send the steering value back.
-          //       Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
+          //       Normalizing values between [-1, 1].
           msgJson["steering_angle"] = -steer_value/deg2rad(25);
           msgJson["throttle"] = throttle_value;
 

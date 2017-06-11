@@ -5,7 +5,7 @@
 
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
+// Set the timestep length and duration
 size_t N = 25;
 double dt = 0.05;
 
@@ -54,7 +54,7 @@ class FG_eval
   //       the object is invoked with the passed in vectors
   void operator()(ADvector& fg, const ADvector& vars)
   {
-    // TODO: Implement MPC
+    // Implement MPC
     // The cost is stored is the first element of `fg`.
     // Any additions to the cost should be added to `fg[0]`.
     fg[0] = 0;
@@ -155,56 +155,29 @@ class FG_eval
 MPC::MPC() {}
 MPC::~MPC() {}
 
-// Function takes in the initial state and coefficients of the fitting
-// polynomial. This function mostly sets up the vehicle model constraints
-// and variables for the Ipopt.
-vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
+// Initialize all the necessary variable and constraints limits
+void MPC::Initialize()
 {
-  bool ok = true;
-  size_t i;
-  typedef CPPAD_TESTVECTOR(double) Dvector;
-
-  // Initial state variables
-  double x = state[0];
-  double y = state[1];
-  double psi = state[2];
-  double v = state[3];
-  double cte = state[4];
-  double epsi = state[5];
-
-  // TODO: Set the number of model variables (includes both states and inputs).
-
   // Set up the number of model variables (includes state & actuator inputs).
   // NOTE 1: The state is a 6 element vector, the actuators is a 2
   //       element vector and there are 'N' timesteps.
   //       The number of variables is: 6 * N + 2 * N-1.
   // NOTE 2: The number of actuations is N-1 when number of time steps is N
-  size_t n_vars = 6 * N + 2 * (N - 1);
+  n_vars = 6 * N + 2 * (N - 1);
 
-  // Set the number of constraints
-  size_t n_constraints = N * 6;
+  // Set the size of the variables vector before initializing
+  vars = Dvector(n_vars);
 
-  // Initial value of the independent variables.
-  // NOTE: This should be 0 besides initial state.
-  Dvector vars(n_vars);
+  // This should be 0 besides initial state.
+  // NOTE: The initial state is setup fresh for every Solve() call
   for (int i = 0; i < n_vars; i++)
   {
     vars[i] = 0;
   }
 
-  // Set the initial variable values
-  vars[x_start] = x;
-  vars[y_start] = y;
-  vars[psi_start] = psi;
-  vars[v_start] = v;
-  vars[cte_start] = cte;
-  vars[epsi_start] = epsi;
-
-  // Vector for the variable upper and lower bounds for the state 'x'
-  Dvector vars_lowerbound(n_vars);
-  Dvector vars_upperbound(n_vars);
-
-  // TODO: Set lower and upper limits for variables.
+  // Set the size of the variables upper and lower vector
+  vars_lowerbound = Dvector(n_vars);
+  vars_upperbound = Dvector(n_vars);
 
   // Set up all non-actuators variables upper and lowerlimits
   // to the max negative and positive values.
@@ -215,9 +188,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
     vars_upperbound[i] = 1.0e19;
   }
 
-  // TODO: Set the number of constraints
   // The upper and lower limits of delta are set to -25 and 25 degrees
-  // NOTE: The values are in radians.
   for (int i = delta_start; i < a_start; i++)
   {
     vars_lowerbound[i] = -25;
@@ -231,16 +202,59 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
     vars_upperbound[i] = 1.0;
   }
 
-  // Lower and upper limits for the state variable constraints
-  Dvector constraints_lowerbound(n_constraints);
-  Dvector constraints_upperbound(n_constraints);
+  // Set the number of constraints
+  n_constraints = N * 6;
 
-  // NOTE: All of these should be 0 except the initial state indices.
+  // Set the size of the constraints upper and lower vector
+  constraints_lowerbound = Dvector(n_constraints);
+  constraints_upperbound = Dvector(n_constraints);
+
+  // All of these should be 0 except the initial state indices.
+  // NOTE: The initial state is setup in the Solve() function for every iteration
   for (int i = 0; i < n_constraints; i++)
   {
     constraints_lowerbound[i] = 0;
     constraints_upperbound[i] = 0;
   }
+
+  // Set the previous delta and accelaration to 0.0
+  prev_delta = 0.0;
+  prev_a = 0.0;
+
+  // Set the initialization flag to true
+  is_initialized = true;
+}
+
+// Function takes in the initial state and coefficients of the fitting
+// polynomial. This function mostly sets up the vehicle model constraints
+// and variables for the Ipopt.
+vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
+{
+  bool ok = true;
+  size_t i;
+  typedef CPPAD_TESTVECTOR(double) Dvector;
+
+  // Check if the MPC object has been initialized before
+  if(!is_initialized)
+  {
+    Initialize();
+  }
+
+  // Initial state variables
+  double x = state[0];
+  double y = state[1];
+  double psi = state[2];
+  double v = state[3];
+  double cte = state[4];
+  double epsi = state[5];
+
+  // Set the initial variable values
+  vars[x_start] = x;
+  vars[y_start] = y;
+  vars[psi_start] = psi;
+  vars[v_start] = v;
+  vars[cte_start] = cte;
+  vars[epsi_start] = epsi;
 
   // Initial state variable constraints lower bounds because of initial state
   constraints_lowerbound[x_start] = x;
@@ -291,10 +305,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
 
-  // TODO: Return the first actuator values. The variables can be accessed with
-  // `solution.x[i]`.
-  //
-  // NOTE: {...} is shorthand for creating a vector, so auto x1 = {1.0, 2.0}
-  // creates a 2 element double vector.
+  // Store the first actuator values for the next iteration to account for the lag
+  prev_delta = solution.x[delta_start];
+  prev_a = solution.x[a_start];
+
   return {solution.x[delta_start], solution.x[a_start]};
 }
