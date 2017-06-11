@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 0;
-double dt = 0;
+size_t N = 25;
+double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -59,40 +59,101 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
-  // TODO: Set the number of model variables (includes both states and inputs).
-  // For example: If the state is a 4 element vector, the actuators is a 2
-  // element vector and there are 10 timesteps. The number of variables is:
-  //
-  // 4 * 10 + 2 * 9
-  size_t n_vars = 0;
+  // Initial state variables
+  double x = x0[0];
+  double y = x0[1];
+  double psi = x0[2];
+  double v = x0[3];
+  double cte = x0[4];
+  double epsi = x0[5];
 
-  // TODO: Set the number of constraints
-  size_t n_constraints = 0;
+  // TODO: Set the number of model variables (includes both states and inputs).
+
+  // Set up the number of model variables (includes state & actuator inputs).
+  // NOTE 1: The state is a 6 element vector, the actuators is a 2
+  //       element vector and there are 'N' timesteps.
+  //       The number of variables is: 6 * N + 2 * N-1.
+  // NOTE 2: The number of actuations is N-1 when number of time steps is N
+  size_t n_vars = 6 * N + 2 * (N - 1);
+
+  // Set the number of constraints
+  size_t n_constraints = N * 6;
 
   // Initial value of the independent variables.
-  // SHOULD BE 0 besides initial state.
+  // NOTE: This should be 0 besides initial state.
   Dvector vars(n_vars);
   for (int i = 0; i < n_vars; i++)
   {
     vars[i] = 0;
   }
 
+  // Set the initial variable values
+  vars[x_start] = x;
+  vars[y_start] = y;
+  vars[psi_start] = psi;
+  vars[v_start] = v;
+  vars[cte_start] = cte;
+  vars[epsi_start] = epsi;
+
+  // Vector for the variable upper and lower bounds for the state 'x'
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
+
   // TODO: Set lower and upper limits for variables.
 
-  // Lower and upper limits for the constraints
-  // Should be 0 besides initial state.
+  // Set up all non-actuators variables upper and lowerlimits
+  // to the max negative and positive values.
+  // NOTE: Delta start is when the actuator variables within the vector start
+  for (int i = 0; i < delta_start; i++)
+  {
+    vars_lowerbound[i] = -1.0e19;
+    vars_upperbound[i] = 1.0e19;
+  }
+
+  // TODO: Set the number of constraints
+  // The upper and lower limits of delta are set to -25 and 25 degrees
+  // NOTE: The values are in radians.
+  for (int i = delta_start; i < a_start; i++)
+  {
+    vars_lowerbound[i] = -0.436332;
+    vars_upperbound[i] = 0.436332;
+  }
+
+  // Acceleration/decceleration upper and lower limits.
+  for (int i = a_start; i < n_vars; i++)
+  {
+    vars_lowerbound[i] = -1.0;
+    vars_upperbound[i] = 1.0;
+  }
+
+  // Lower and upper limits for the state variable constraints
   Dvector constraints_lowerbound(n_constraints);
   Dvector constraints_upperbound(n_constraints);
 
+  // NOTE: All of these should be 0 except the initial state indices.
   for (int i = 0; i < n_constraints; i++)
   {
     constraints_lowerbound[i] = 0;
     constraints_upperbound[i] = 0;
   }
 
-  // object that computes objective and constraints
+  // Initial state variable constraints lower bounds because of initial state
+  constraints_lowerbound[x_start] = x;
+  constraints_lowerbound[y_start] = y;
+  constraints_lowerbound[psi_start] = psi;
+  constraints_lowerbound[v_start] = v;
+  constraints_lowerbound[cte_start] = cte;
+  constraints_lowerbound[epsi_start] = epsi;
+
+  // Initial state variable constraints upper bounds because of initial state
+  constraints_upperbound[x_start] = x;
+  constraints_upperbound[y_start] = y;
+  constraints_upperbound[psi_start] = psi;
+  constraints_upperbound[v_start] = v;
+  constraints_upperbound[cte_start] = cte;
+  constraints_upperbound[epsi_start] = epsi;
+
+  // Object that computes objective and constraints
   FG_eval fg_eval(coeffs);
 
   // NOTE: You don't have to worry about these options
@@ -128,7 +189,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   //
-  // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
+  // NOTE: {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
-  return {};
+  return {solution.x[delta_start], solution.x[a_start]};
 }
