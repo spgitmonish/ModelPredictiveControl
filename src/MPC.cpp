@@ -6,7 +6,7 @@
 using CppAD::AD;
 
 // Set the timestep length and duration
-size_t N = 25;
+size_t N = 20;
 double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
@@ -81,7 +81,7 @@ class FG_eval
     //       between the values at time 't+1' and 't'
     for (int t = 0; t < N - 2; t++)
     {
-      fg[0] += 10000 * (CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2));
+      fg[0] += 15000 * (CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2));
       fg[0] += 10000 * (CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2));
     }
 
@@ -191,8 +191,8 @@ void MPC::Initialize()
   // The upper and lower limits of delta are set to -25 and 25 degrees
   for (int i = delta_start; i < a_start; i++)
   {
-    vars_lowerbound[i] = -25;
-    vars_upperbound[i] = 25;
+    vars_lowerbound[i] = -20;
+    vars_upperbound[i] = 20;
   }
 
   // Acceleration/decceleration upper and lower limits.
@@ -247,6 +247,17 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   double v = state[3];
   double cte = state[4];
   double epsi = state[5];
+
+  // Account for the lag(100ms = 0.1s) in actuator execution
+  // The next state after 100ms is calculated using the vehicle model
+  double lag = 0.1;
+
+  x = x + v * cos(psi) * lag;
+  y = y + v * sin(psi) * lag;
+  psi = psi + (v/Lf) * prev_delta * lag;
+  v = v + prev_a * lag;
+  cte = cte + v * sin(epsi) * lag;
+  epsi = epsi + (v/Lf) * prev_delta * lag;
 
   // Set the initial variable values
   vars[x_start] = x;
