@@ -1,3 +1,4 @@
+// Function definitions
 // Evaluate a polynomial.
 double polyeval(Eigen::VectorXd coeffs, double x)
 {
@@ -27,7 +28,8 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals, int order)
 
   for (int j = 0; j < xvals.size(); j++)
   {
-    for (int i = 0; i < order; i++) {
+    for (int i = 0; i < order; i++)
+    {
       A(j, i + 1) = A(j, i) * xvals(j);
     }
   }
