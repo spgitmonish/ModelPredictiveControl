@@ -22,7 +22,7 @@ double dt = 0.05;
 const double Lf = 2.67;
 
 // Reference velocity for the cost function calculation
-double ref_v = 25;
+double ref_v = 40;
 
 // The solver takes all the state variables and actuator variables in single vector.
 // Establish when one variable starts and ends within the single vector.
@@ -120,8 +120,10 @@ class FG_eval
       AD<double> delta0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      // Here we have a third order polynomial represting the reference points
+      AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * pow(x0, 2) + coeffs[3] * pow(x0, 3);
+      // The derivative of the polynomial is used to calculate the desired psi
+      AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * pow(x0, 2));
 
       // The idea here is to constraint this value to be 0.
       // Recall the equations for the model:
@@ -218,8 +220,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   // NOTE: The values are in radians.
   for (int i = delta_start; i < a_start; i++)
   {
-    vars_lowerbound[i] = -0.436332;
-    vars_upperbound[i] = 0.436332;
+    vars_lowerbound[i] = -25;
+    vars_upperbound[i] = 25;
   }
 
   // Acceleration/decceleration upper and lower limits.
@@ -292,10 +294,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   //
-  // NOTE: {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
+  // NOTE: {...} is shorthand for creating a vector, so auto x1 = {1.0, 2.0}
   // creates a 2 element double vector.
-  return {solution.x[x_start + 1],   solution.x[y_start + 1],
-          solution.x[psi_start + 1], solution.x[v_start + 1],
-          solution.x[cte_start + 1], solution.x[epsi_start + 1],
-          solution.x[delta_start],   solution.x[a_start]};
+  return {solution.x[delta_start], solution.x[a_start]};
 }

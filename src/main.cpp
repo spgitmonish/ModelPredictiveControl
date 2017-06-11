@@ -51,10 +51,7 @@ int main()
   // MPC object
   MPC mpc;
 
-  // boolean which indicates if this is first pass into MPC
-  bool first_pass = true;
-
-  h.onMessage([&mpc, &first_pass](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
+  h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
   {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -88,52 +85,43 @@ int main()
           // Polynomial coefficients
           Eigen::VectorXd coeffs;
 
-          // Check if this is the first pass of the MPC algorithm
-          if((bool)first_pass == true)
+          // Eigen vectors for storing the converted co-ordinates
+          Eigen::VectorXd xvals(ptsx.size());
+          Eigen::VectorXd yvals(ptsy.size());
+
+          // Copy the data into Eigen vectors after converting to car-cordinates
+          for(size_t index = 0; index < ptsx.size(); index++)
           {
-            Eigen::VectorXd xvals;
-            Eigen::VectorXd yvals;
-
-            // Copy the data into Eigen vectors
-            for(size_t index = 0; index < ptsx.size(); index++)
-            {
-              xvals[index] = ptsx[index];
-              yvals[index] = ptsy[index];
-            }
-
-            // Fit a 3rd order polynomial for the x, y data
-            // NOTE: The assumption made here is that len of x and y are equal,
-            //       this is a good case for adding in an Assert
-            coeffs = polyfit(xvals, yvals, 3);
-
-            // Using the coefficients of the polynomial find the cross track error
-            // NOTE: Cross track error is calculated along the 'y' direction
-            double cte = polyeval(coeffs, px) - py;
-
-            // Calculate the desired orientation
-            // NOTE: The desired orientation is calculated as f'(x)
-            //       The polynomial, f(x):
-            //       coeffs[0] + coeffs[1] * x + coeffs[2] * x^2 + coeffs[3] * x^3
-            //       The derivative, f'(x):
-            //       coeffs[1] + 2 * coeffs[2] * x + 3 * coeffs[3] * x
-            double psides = CppAD::atan(coeffs[1] + 2 * coeffs[2] * px + 3 * coeffs[3] * px);
-
-            // Orientation error
-            // NOTE: Due to the sign starting at 0, the orientation error is -f'(x)
-            double epsi = psi - psides;
-
-            // Set up the state vector
-            state << px, py, psi, v, cte, epsi;
-
-            // Set the flag to FALSE since the first pass is complete
-            first_pass = false;
+            xvals[index] = (ptsx[index] - px) * cos(psi) + (ptsy[index] - py) * sin(psi);
+            yvals[index] = (ptsy[index] - py) * cos(psi) - (ptsx[index] - px) * sin(psi);
           }
+
+          // Fit a 3rd order polynomial for the x, y data
+          // NOTE: The assumption made here is that len of x and y are equal,
+          //       this is a good case for adding in an Assert
+          coeffs = polyfit(xvals, yvals, 3);
+
+          // Using the coefficients of the polynomial find the cross track error
+          // At the origin of the car
+          // NOTE: Cross track error is calculated along the 'y' direction
+          double cte = polyeval(coeffs, 0) - 0;
+
+          // Calculate the orientation error
+          // NOTE 1: The desired orientation is calculated as f'(x)
+          //       The polynomial, f(x):
+          //       coeffs[0] + coeffs[1] * x + coeffs[2] * x^2 + coeffs[3] * x^3
+          //       The derivative, f'(x):
+          //       coeffs[1] + 2 * coeffs[2] * x + 3 * coeffs[3] * x^2
+          // NOTE 2: Due to psi starting at 0 the orientation error is -f'(x).
+          // NOTE 3: Since the initial state is (0, 0) the only non-zero term
+          //         remaining is coeffs[1]
+          double epsi = -CppAD::atan(coeffs[1]);
+
+          // Set up the state vector
+          state << 0, 0, 0, v, cte, epsi;
 
           // Calculate the new state
           auto vars = mpc.Solve(state, coeffs);
-
-          // Set up the state variable for the next iteration
-          state << vars[0], vars[1], vars[2], vars[3], vars[4], vars[5];
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -142,13 +130,13 @@ int main()
           *
           */
           // Set up the steering and throttle values
-          steer_value = vars[4];
-          throttle_value = vars[5];
+          steer_value = vars[0];
+          throttle_value = vars[1];
 
           json msgJson;
-          // NOTE(not required): Remember to divide by deg2rad(25) before you send the steering value back.
-          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
+          // NOTE: Divide by deg2rad(25) before you send the steering value back.
+          //       Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
+          msgJson["steering_angle"] = -steer_value/deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           // Display the MPC predicted trajectory
