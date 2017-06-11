@@ -41,6 +41,95 @@ class FG_eval
   void operator()(ADvector& fg, const ADvector& vars)
   {
     // TODO: Implement MPC
+    // The cost is stored is the first element of `fg`.
+    // Any additions to the cost should be added to `fg[0]`.
+    fg[0] = 0;
+
+    // The part of the cost based on the reference state.
+    // Here we minimize cross track, heading and velocity error
+    for (int t = 0; t < N; t++)
+    {
+      fg[0] += CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+    }
+
+    // Minimize the magnitude of actuators and prevent sharp spikes i.e. change rate
+    for (int t = 0; t < N - 1; t++)
+    {
+      fg[0] += CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += CppAD::pow(vars[a_start + t], 2);
+    }
+
+    // Minimize the value gap between sequential actuations. Make control
+    // decisions smoother, the next control should be similar to the current.
+    // NOTE: By multiplying a constant the cost increases with a bigger difference
+    //       between the values at time 't+1' and 't'
+    for (int t = 0; t < N - 2; t++)
+    {
+      fg[0] += 10000 * (CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2));
+      fg[0] += 10000 * (CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2));
+    }
+
+    // This section sets up the model constraints.
+
+    // Initial model constraint is based on the initial state passed in.
+    // NOTE: 1 is added to each of the starting indices due to cost being located
+    //       at index 0 of `fg'.
+    fg[1 + x_start] = vars[x_start];
+    fg[1 + y_start] = vars[y_start];
+    fg[1 + psi_start] = vars[psi_start];
+    fg[1 + v_start] = vars[v_start];
+    fg[1 + cte_start] = vars[cte_start];
+    fg[1 + epsi_start] = vars[epsi_start];
+
+    // The rest of the constraints at t+1 are based on the vehicle model
+    for (int t = 1; t < N; t++)
+    {
+      // The state at time t+1 .
+      AD<double> x1 = vars[x_start + t];
+      AD<double> y1 = vars[y_start + t];
+      AD<double> psi1 = vars[psi_start + t];
+      AD<double> v1 = vars[v_start + t];
+      AD<double> cte1 = vars[cte_start + t];
+      AD<double> epsi1 = vars[epsi_start + t];
+
+      // The state at time t.
+      AD<double> x0 = vars[x_start + t - 1];
+      AD<double> y0 = vars[y_start + t - 1];
+      AD<double> psi0 = vars[psi_start + t - 1];
+      AD<double> v0 = vars[v_start + t - 1];
+      AD<double> cte0 = vars[cte_start + t - 1];
+      AD<double> epsi0 = vars[epsi_start + t - 1];
+
+      // Only consider the actuation at time t.
+      AD<double> delta0 = vars[delta_start + t - 1];
+      AD<double> a0 = vars[a_start + t - 1];
+
+      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
+      AD<double> psides0 = CppAD::atan(coeffs[1]);
+
+      // The idea here is to constraint this value to be 0.
+      // Recall the equations for the model:
+      // x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
+      // y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
+      // psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
+      // v_[t+1] = v[t] + a[t] * dt
+      // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
+      // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
+      fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
+      fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
+      fg[1 + psi_start + t] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
+      fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
+      fg[1 + cte_start + t] = cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+      fg[1 + epsi_start + t] = epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
+
+      // NOTE: This is where the model constraints are set up for each timestep.
+      //       Except for the initial model constraints  bounds being set to
+      //       the maximum/minimum possible values in MPC::Solve(). The remaining
+      //       constraints is bounded to 0. So the optimizer will force this value
+      //       of fg for each time step 't+1' to be zero.
+    }
   }
 };
 
