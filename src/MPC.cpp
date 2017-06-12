@@ -228,7 +228,7 @@ void MPC::Initialize()
 // Function takes in the initial state and coefficients of the fitting
 // polynomial. This function mostly sets up the vehicle model constraints
 // and variables for the Ipopt.
-vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
+mpc_output MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
 {
   bool ok = true;
   size_t i;
@@ -314,11 +314,33 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
 
   // Cost
   auto cost = solution.obj_value;
+#if DEBUG
   std::cout << "Cost " << cost << std::endl;
+#endif
 
   // Store the first actuator values for the next iteration to account for the lag
   prev_delta = solution.x[delta_start];
   prev_a = solution.x[a_start];
 
-  return {solution.x[delta_start], solution.x[a_start]};
+  // Variable which stores the output
+  mpc_output solution_to_return;
+
+  // Store the values to return to the caller
+  solution_to_return.steer_angle = prev_delta;
+  solution_to_return.throttle = prev_a;
+
+  // Copy the solution from the optimizer into a temporary variable
+  auto sol_x = solution.x;
+
+  // Store the x and y values from the solution
+  // NOTE: .data() method of the class returns the pointer to the first element.
+  //       Current (x,y) value is ignored & predicted (x, y) values are returned.
+  vector<double> next_x_vals(sol_x.data() + x_start + 1, sol_x.data() + y_start - 1);
+  vector<double> next_y_vals(sol_x.data() + y_start + 1, sol_x.data() + psi_start - 1);
+  solution_to_return.pred_x_vals = next_x_vals;
+  solution_to_return.pred_y_vals = next_y_vals;
+
+  // Vectors of the predicted path to be returned
+  // Return the first actuator values along with the predicted path
+  return solution_to_return;
 }

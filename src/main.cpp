@@ -57,7 +57,9 @@ int main()
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     string sdata = string(data).substr(0, length);
+  #if DEBUG_VERBOSE
     cout << sdata << endl;
+  #endif
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2')
     {
       string s = hasData(sdata);
@@ -121,12 +123,12 @@ int main()
           state << 0, 0, 0, v, cte, epsi;
 
           // Calculate the new state
-          auto vars = mpc.Solve(state, coeffs);
+          mpc_output vars = mpc.Solve(state, coeffs);
 
           // Set up the steering and throttle values
           // NOTE: Both are in between [-1, 1] for the simulator
-          steer_value = vars[0];
-          throttle_value = vars[1];
+          steer_value = vars.steer_angle;
+          throttle_value = vars.throttle;
 
           json msgJson;
           // NOTE: Divide by deg2rad(20) before you send the steering value back.
@@ -135,8 +137,8 @@ int main()
           msgJson["throttle"] = throttle_value;
 
           // Display the MPC predicted trajectory
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
+          vector<double> mpc_x_vals = vars.pred_x_vals;
+          vector<double> mpc_y_vals = vars.pred_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
@@ -145,8 +147,11 @@ int main()
           msgJson["mpc_y"] = mpc_y_vals;
 
           // Display the waypoints/reference line
-          vector<double> next_x_vals;
-          vector<double> next_y_vals;
+          // NOTE: The way point where the car is currently is not displayed because
+          //       it leads to a reference line being drawn behind the car as well
+          //       in the simulator
+          vector<double> next_x_vals(xvals.data() + 1, xvals.data() + xvals.size() - 1);
+          vector<double> next_y_vals(yvals.data() + 1, yvals.data() + yvals.size() - 1);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
@@ -154,7 +159,10 @@ int main()
           msgJson["next_y"] = next_y_vals;
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+        #if DEBUG_VERBOSE
           std::cout << msg << std::endl;
+        #endif
+
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.

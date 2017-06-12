@@ -11,6 +11,18 @@ using namespace std;
 // Use the Vector type for CPPAD library
 typedef CPPAD_TESTVECTOR(double) Dvector;
 
+typedef struct mpc_output
+{
+  // For storing the first steering angle and acceleration output from
+  // the ipopt optimizer
+  double steer_angle;
+  double throttle;
+
+  // Vector of predicted x & y values
+  vector<double> pred_x_vals;
+  vector<double> pred_y_vals;
+} mpc_output;
+
 class MPC
 {
 private:
@@ -48,7 +60,7 @@ public:
 
   // Solve the model given an initial state and polynomial coefficients.
   // Return the first actuatotions.
-  vector<double> Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
+  mpc_output Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
 };
 
 #endif /* MPC_H */

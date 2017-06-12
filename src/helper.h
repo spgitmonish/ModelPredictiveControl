@@ -1,3 +1,9 @@
+// Flag for displaying debug
+#define DEBUG 0
+
+// Flag for enabling verbose debug
+#define DEBUG_VERBOSE DEBUG && 0
+
 // Function definitions
 // Evaluate a polynomial.
 double polyeval(Eigen::VectorXd coeffs, double x)
