@@ -11,6 +11,70 @@ using namespace std;
 // Use the Vector type for CPPAD library
 typedef CPPAD_TESTVECTOR(double) Dvector;
 
+// Structure for storing the different configurations for speed
+typedef struct mpc_speed_config
+{
+  // Number of timesteps
+  size_t N;
+
+  // Duration of timestep
+  double dt;
+
+  // Weights for different variables in the cost function
+  double w_cte;
+  double w_epsi;
+  double w_v;
+  double w_delta;
+  double w_a;
+  double w_delta_time;
+  double w_a_time;
+} mpc_speed_config;
+
+// Objects of type mpc_speed_config with different configurations for different
+// speeds, the speed is set during execution of the object file.
+// This is the default config tuned for 40mph
+const mpc_speed_config config_default = {
+  20,     // Number of timesteps
+  0.05,   // Duration of timestep
+  1.0,    // Weight for cross track error cost element
+  1.0,    // Weight for heading error cost element
+  1.0,    // Weight velocity error cost element
+  1.0,    // Weight for heading magnitude cost element
+  1.0,    // Weight for acceleration magnitude cost element
+  15000,  // Weight for heading magnitude between timesteps cost element
+  10000,  // Weight for acceleration magnitude between timesteps cost element
+};
+
+// This is the 60mph config
+const mpc_speed_config config_60_mph = {
+  10,     // Number of timesteps
+  0.05,   // Duration of timestep
+  2.0,    // Weight for cross track error cost element
+  2.0,    // Weight for heading error cost element
+  1.0,    // Weight velocity error cost element
+  2.0,    // Weight for heading magnitude cost element
+  1.0,    // Weight for acceleration magnitude cost element
+  15000,  // Weight for heading magnitude between timesteps cost element
+  10000,  // Weight for acceleration magnitude between timesteps cost element
+};
+
+// This is the 80mph config
+const mpc_speed_config config_80_mph = {
+  10,     // Number of timesteps
+  0.05,   // Duration of timestep
+  2.0,    // Weight for cross track error cost element
+  2.0,    // Weight for heading error cost element
+  1.0,    // Weight velocity error cost element
+  2.0,    // Weight for heading magnitude cost element
+  0.5,    // Weight for acceleration magnitude cost element
+  15000,  // Weight for heading magnitude between timesteps cost element
+  1500,   // Weight for acceleration magnitude between timesteps cost element
+};
+
+// Extern for main.cpp to set the reference velocity
+extern double ref_v;
+
+// Structure for storing MPC output
 typedef struct mpc_output
 {
   // For storing the first steering angle and acceleration output from

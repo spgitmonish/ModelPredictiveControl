@@ -44,12 +44,64 @@ string hasData(string s)
   return "";
 }
 
-int main()
+// Variable which stores the loaded config
+extern mpc_speed_config loaded_config;
+
+int main(int argc, char** argv)
 {
   uWS::Hub h;
 
   // MPC object
   MPC mpc;
+
+  // Assert if the number of arguments passed in is more than 2.
+  // Including the there is only one additional argument, the velocity
+  assert(argc<=2 && "Only 1(velocity) argument can be passed in!");
+
+  if(argc == 1)
+  {
+    cout << "40 mph config loaded by default" << endl;
+
+    // Set up the reference velocity
+    ref_v = 40;
+
+    // The configuration is loaded from a constant object of the same type
+    loaded_config = config_default;
+  }
+  else
+  {
+    // Get the velocity argument and convert it into integer if it's a valid value
+    // NOTE: The only supported value is '40', '60' & '80'.
+    //       Default config is for 40mph
+    ref_v = atoi(argv[1]);
+    if(ref_v == 60)
+    {
+      cout << "60 mph config loaded" << endl;
+      loaded_config = config_60_mph;
+    }
+    else if(ref_v == 80)
+    {
+      cout << "80 mph config loaded" << endl;
+      loaded_config = config_80_mph;
+    }
+    else
+    {
+      if(ref_v != 40)
+      {
+        cout << "40 mph config loaded by default" << endl;
+      }
+      else
+      {
+        cout << "40 mph config loaded" << endl;
+      }
+
+      // Set up the reference velocity
+      ref_v = 40;
+
+      // The configuration is loaded from a constant object of the same type
+      loaded_config = config_default;
+    }
+  }
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
   {
