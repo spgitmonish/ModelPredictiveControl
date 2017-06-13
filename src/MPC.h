@@ -37,7 +37,7 @@ const mpc_speed_config config_default = {
   8,     // Number of timesteps
   0.1,   // Duration of timestep
   20.0,  // Weight for cross track error cost element
-  5.0,   // Weight for heading error cost element
+  10.0,   // Weight for heading error cost element
   1.0,   // Weight velocity error cost element
   500.0, // Weight for heading magnitude cost element
   0.5,   // Weight for acceleration magnitude cost element
