@@ -44,12 +44,47 @@ string hasData(string s)
   return "";
 }
 
-int main()
+// Variable which stores the loaded config
+extern mpc_speed_config loaded_config;
+
+int main(int argc, char** argv)
 {
   uWS::Hub h;
 
   // MPC object
   MPC mpc;
+
+  // Assert if the number of arguments passed in is more than 2.
+  // Including the there is only one additional argument, the velocity
+  assert(argc<=2 && "Only 1(velocity) argument can be passed in!");
+
+  if(argc == 1)
+  {
+    cout << "Default to reference velocity of 60 mph" << endl;
+
+    // Set up the reference velocity
+    ref_v = 60;
+  }
+  else
+  {
+    // Get the velocity argument and convert it into integer if it's a valid value
+    // NOTE: The only supported value is '40', '60' & '80'.
+    //       Default config is for 40mph
+    ref_v = atoi(argv[1]);
+
+    // Print a message for the user
+    if(ref_v > 80)
+    {
+      cout << "Reference velocity is higher than the model supports, default to 80mph" << endl;
+    }
+    else
+    {
+      cout << ref_v << "mph set as reference velocity" << endl;
+    }
+  }
+
+  // The configuration is loaded from a constant object of the same type
+  loaded_config = config_default;
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
   {
@@ -133,7 +168,7 @@ int main()
           json msgJson;
           // NOTE: Divide by deg2rad(20) before you send the steering value back.
           //       Normalizing values between [-1, 1].
-          msgJson["steering_angle"] = -steer_value/deg2rad(20);
+          msgJson["steering_angle"] = -steer_value/deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           // Display the MPC predicted trajectory

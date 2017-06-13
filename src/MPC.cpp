@@ -1,39 +1,13 @@
 #include "MPC.h"
+#include "MPC_prv.h"
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
 
 using CppAD::AD;
 
-// Set the timestep length and duration
-size_t N = 20;
-double dt = 0.05;
-
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
-// This is the length from front to CoG that has a similar radius.
-const double Lf = 2.67;
-
-// Reference velocity for the cost function calculation
-double ref_v = 40;
-
-// The solver takes all the state variables and actuator variables in single vector.
-// Establish when one variable starts and ends within the single vector.
-size_t x_start = 0;
-size_t y_start = x_start + N;
-size_t psi_start = y_start + N;
-size_t v_start = psi_start + N;
-size_t cte_start = v_start + N;
-size_t epsi_start = cte_start + N;
-size_t delta_start = epsi_start + N;
-size_t a_start = delta_start + N - 1;
+// Variable which stores the loaded config
+mpc_speed_config loaded_config;
 
 class FG_eval
 {
@@ -63,16 +37,16 @@ class FG_eval
     // Here we minimize cross track, heading and velocity error
     for (int t = 0; t < N; t++)
     {
-      fg[0] += CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += CppAD::pow(vars[epsi_start + t], 2);
-      fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+      fg[0] += loaded_config.w_cte * CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += loaded_config.w_epsi * CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += loaded_config.w_v * CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the magnitude of actuators and prevent sharp spikes i.e. change rate
     for (int t = 0; t < N - 1; t++)
     {
-      fg[0] += CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t], 2);
+      fg[0] += loaded_config.w_delta * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += loaded_config.w_a * CppAD::pow(vars[a_start + t], 2);
     }
 
     // Minimize the value gap between sequential actuations. Make control
@@ -81,8 +55,8 @@ class FG_eval
     //       between the values at time 't+1' and 't'
     for (int t = 0; t < N - 2; t++)
     {
-      fg[0] += 15000 * (CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2));
-      fg[0] += 10000 * (CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2));
+      fg[0] += loaded_config.w_delta_time * (CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2));
+      fg[0] += loaded_config.w_a_time * (CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2));
     }
 
     // This section sets up the model constraints.
@@ -158,6 +132,20 @@ MPC::~MPC() {}
 // Initialize all the necessary variable and constraints limits
 void MPC::Initialize()
 {
+  // Initialize and overwrite the default values
+  N = loaded_config.N;
+  dt = loaded_config.dt;
+
+  // Set up the indices
+  x_start = 0;
+  y_start = x_start + N;
+  psi_start = y_start + N;
+  v_start = psi_start + N;
+  cte_start = v_start + N;
+  epsi_start = cte_start + N;
+  delta_start = epsi_start + N;
+  a_start = delta_start + N - 1;
+
   // Set up the number of model variables (includes state & actuator inputs).
   // NOTE 1: The state is a 6 element vector, the actuators is a 2
   //       element vector and there are 'N' timesteps.
@@ -191,8 +179,8 @@ void MPC::Initialize()
   // The upper and lower limits of delta are set to -25 and 25 degrees
   for (int i = delta_start; i < a_start; i++)
   {
-    vars_lowerbound[i] = -20;
-    vars_upperbound[i] = 20;
+    vars_lowerbound[i] = -0.436332;
+    vars_upperbound[i] = 0.436332;
   }
 
   // Acceleration/decceleration upper and lower limits.
