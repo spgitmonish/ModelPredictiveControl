@@ -34,41 +34,15 @@ typedef struct mpc_speed_config
 // speeds, the speed is set during execution of the object file.
 // This is the default config tuned for 40mph
 const mpc_speed_config config_default = {
-  20,     // Number of timesteps
-  0.05,   // Duration of timestep
-  1.0,    // Weight for cross track error cost element
-  1.0,    // Weight for heading error cost element
-  1.0,    // Weight velocity error cost element
-  1.0,    // Weight for heading magnitude cost element
-  1.0,    // Weight for acceleration magnitude cost element
-  15000,  // Weight for heading magnitude between timesteps cost element
-  10000,  // Weight for acceleration magnitude between timesteps cost element
-};
-
-// This is the 60mph config
-const mpc_speed_config config_60_mph = {
-  10,     // Number of timesteps
-  0.05,   // Duration of timestep
-  2.0,    // Weight for cross track error cost element
-  2.0,    // Weight for heading error cost element
-  1.0,    // Weight velocity error cost element
-  2.0,    // Weight for heading magnitude cost element
-  1.0,    // Weight for acceleration magnitude cost element
-  15000,  // Weight for heading magnitude between timesteps cost element
-  10000,  // Weight for acceleration magnitude between timesteps cost element
-};
-
-// This is the 80mph config
-const mpc_speed_config config_80_mph = {
-  10,     // Number of timesteps
-  0.05,   // Duration of timestep
-  2.0,    // Weight for cross track error cost element
-  2.0,    // Weight for heading error cost element
-  1.0,    // Weight velocity error cost element
-  2.0,    // Weight for heading magnitude cost element
-  0.5,    // Weight for acceleration magnitude cost element
-  15000,  // Weight for heading magnitude between timesteps cost element
-  1500,   // Weight for acceleration magnitude between timesteps cost element
+  8,     // Number of timesteps
+  0.1,   // Duration of timestep
+  20.0,  // Weight for cross track error cost element
+  5.0,   // Weight for heading error cost element
+  1.0,   // Weight velocity error cost element
+  500.0, // Weight for heading magnitude cost element
+  0.5,   // Weight for acceleration magnitude cost element
+  45000, // Weight for heading magnitude between timesteps cost element
+  1.0,   // Weight for acceleration magnitude between timesteps cost element
 };
 
 // Extern for main.cpp to set the reference velocity

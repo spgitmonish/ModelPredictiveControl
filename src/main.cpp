@@ -60,13 +60,10 @@ int main(int argc, char** argv)
 
   if(argc == 1)
   {
-    cout << "40 mph config loaded by default" << endl;
+    cout << "Default to reference velocity of 60 mph" << endl;
 
     // Set up the reference velocity
-    ref_v = 40;
-
-    // The configuration is loaded from a constant object of the same type
-    loaded_config = config_default;
+    ref_v = 60;
   }
   else
   {
@@ -74,34 +71,20 @@ int main(int argc, char** argv)
     // NOTE: The only supported value is '40', '60' & '80'.
     //       Default config is for 40mph
     ref_v = atoi(argv[1]);
-    if(ref_v == 60)
+
+    // Print a message for the user
+    if(ref_v > 80)
     {
-      cout << "60 mph config loaded" << endl;
-      loaded_config = config_60_mph;
-    }
-    else if(ref_v == 80)
-    {
-      cout << "80 mph config loaded" << endl;
-      loaded_config = config_80_mph;
+      cout << "Reference velocity is higher than the model supports, default to 80mph" << endl;
     }
     else
     {
-      if(ref_v != 40)
-      {
-        cout << "40 mph config loaded by default" << endl;
-      }
-      else
-      {
-        cout << "40 mph config loaded" << endl;
-      }
-
-      // Set up the reference velocity
-      ref_v = 40;
-
-      // The configuration is loaded from a constant object of the same type
-      loaded_config = config_default;
+      cout << ref_v << "mph set as reference velocity" << endl;
     }
   }
+
+  // The configuration is loaded from a constant object of the same type
+  loaded_config = config_default;
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
   {
@@ -185,7 +168,7 @@ int main(int argc, char** argv)
           json msgJson;
           // NOTE: Divide by deg2rad(20) before you send the steering value back.
           //       Normalizing values between [-1, 1].
-          msgJson["steering_angle"] = -steer_value/deg2rad(20);
+          msgJson["steering_angle"] = -steer_value/deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
           // Display the MPC predicted trajectory
