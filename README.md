@@ -1,7 +1,35 @@
-# CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+# Introduction
+In this project, I implemented a C++ MPC (Model Predictive Control) model to control the steering angle and throttle of a vehicle running on a simulator. MPC is an advanced method of process control that has been used since the 1980's. The advantage of MPC is that it predicts the control action for the current timeslot while taking future actions into account. This achieved by optimizing a finite time horizon 'T' with 'N' timeslots of duration 'dt' each (T = N * dt). Once the control action is applied for the current time step, the future predictions are discarded and the process is repeated again.
 
+In this project, MPC uses a kinematic model and not the dynamic model. The dynamic model, which considers internal vehicle dynamics along with dynamics of a car in an environment, is not used because the car is being run in a simulator. In my PID controller project (https://github.com/spgitmonish/PIDController) the cross track error is used as the input to the PID to control steering angle. The model PID uses seems simpler when compared to MPC which has the advantage of predicting the future events with a much more complex model. Thus, MPC works much better than PID and it can be seen in this project as well with the smoothness of the drive.
 ---
+
+## Project
+The goal of this project is to implement a MPC model which controls the steering angle and speed of a car in a simulator. The MPC uses the kinematic model for modeling the dynamics of the vehicle in the environment. The state of the vehicle in this environment is determined by a vector containing 6 components [x, y, psi, v, cte, epsi]
+
+'x': Position of the car in 'x' direction
+'y': Position of the car in 'y' direction  
+'psi': Heading angle of the car
+'v': Velocity of the car
+'cte': Cross track error of the car from the reference
+'epsi': Heading angle error of the car from
+
+In this project MPC dictates two control variables, steering angle('delta') and throttle('a'). These two variables have a say in the state of the vehicle.
+
+http://csrgxtu.github.io/2015/03/20/Writing-Mathematic-Fomulars-in-Markdown/
+
+\[x_{t+1} = x_{t} + v_{t} * cos(psi_{t}) * dt\]
+\[y_{t+1} = y_{t} + v_{t} * sin(psi_{t}) * dt\]
+\[psi_{t+1} = psi_{t} + (v_{t}/L_{f}) * delta * dt\]
+\[v_{t+1} = v_{t} + a * dt\]
+\[cte_{t+1} = f(x) - y_{t} + v_{t} * sin(epsi_{t}) * dt\]
+\[epsi_{t+1} = psi_{t} - psides{t} + (v_{t}/L_{f}) * delta * dt\]
+
+Dependents variables not related to the state:
+
+\[psides = -arctan(f'(x))\]
+
+\[f(x)\]
 
 ## Dependencies
 
@@ -19,7 +47,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Run either `install-mac.sh` or `install-ubuntu.sh`.
   * If you install from source, checkout to commit `e94b6e1`, i.e.
     ```
-    git clone https://github.com/uWebSockets/uWebSockets 
+    git clone https://github.com/uWebSockets/uWebSockets
     cd uWebSockets
     git checkout e94b6e1
     ```
@@ -31,7 +59,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Mac: `brew install ipopt`
   * Linux
     * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
-    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`. 
+    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`.
   * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
 * [CppAD](https://www.coin-or.org/CppAD/)
   * Mac: `brew install cppad`
