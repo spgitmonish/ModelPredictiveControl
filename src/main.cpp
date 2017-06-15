@@ -125,6 +125,7 @@ int main(int argc, char** argv)
           Eigen::VectorXd yvals(ptsy.size());
 
           // Copy the data into Eigen vectors after converting to car-cordinates
+          // NOTE: Great visualization in this link: http://bit.ly/2ptq4IX
           for(size_t index = 0; index < ptsx.size(); index++)
           {
             xvals[index] = (ptsx[index] - px) * cos(psi) + (ptsy[index] - py) * sin(psi);

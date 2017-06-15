@@ -5,7 +5,7 @@ In this project, I implemented a C++ MPC (Model Predictive Control) model to con
 
 MPC uses a kinematic model and does not include the dynamic model. The dynamic model, which considers internal vehicle dynamics along with dynamics of a car in an environment, is not used because the car is being run in a simulator and the car internal dynamics are not obvious.
 
-In my PID controller project (https://github.com/spgitmonish/PIDController) the cross track error is used as the input to the PID controller to control steering angle. The model PID controller is based on seems simpler when compared to MPC which has the advantage of predicting future events with a much more complex model. Thus, MPC works much better than PID and it can be seen in this project as well with the smoothness of the drive.
+In my PID controller project (https://github.com/spgitmonish/PIDController) the cross track error is used as the input to the PID controller to control steering angle. The model PID controller is based on, seems simpler when compared to MPC which has the advantage of predicting future events with a much more complex model. Thus, MPC works much better than PID and it can be seen in this project as well with the smoothness of the drive.
 
 > **NOTE:**
 > An additional advantage with MPC is that the two actuators are incorporated into the model as variables. But in case of PID, two separate controllers are required to control steering angle and throttle.
@@ -13,7 +13,7 @@ In my PID controller project (https://github.com/spgitmonish/PIDController) the 
 ## Project
 The goal of this project is to implement a MPC model which controls the steering angle and speed(using throttle) of a car in a simulator. MPC uses the kinematic model for modeling the dynamics of the vehicle in the environment. The state of the vehicle in this environment is determined by a vector containing 6 components `['x', 'y', 'psi', 'v', 'cte', 'epsi']`
 
-In this project MPC dictates two control variables, steering angle`('delta')` and throttle`('a')`. These two variables have a say in the state of the vehicle at time `'t+1'`:
+In this project, MPC dictates two control variables, steering angle`('delta')` and throttle`('a')`. These two variables have a say in the state of the vehicle at time `'t+1'`:
 
 * \[x_{t+1} = x_{t} + v_{t} * cos(psi_{t}) * dt\]
       Position of the car in x direction
@@ -23,17 +23,17 @@ In this project MPC dictates two control variables, steering angle`('delta')` an
       Heading angle of the car
 * \[v_{t+1} = v_{t} + a_{t} * dt\]
       Velocity of the car
-* \[cte_{t+1} = cte_{t} + f(x) - y_{t} + v_{t} * sin(epsi_{t}) * dt\]
+* \[cte_{t+1} = cte_{t} + f(x_{t}) - y_{t} + v_{t} * sin(epsi_{t}) * dt\]
       Cross track error of the car from the reference
-* \[epsi_{t+1} = psi_{t} - psides_{t} + (v_{t}/L_{f}) * delta * dt\]
+* \[epsi_{t+1} = psi_{t} - psides_{t} + (v_{t}/L_{f}) * delta_{t} * dt\]
       Heading angle error of the car
 
 The following are the dependent variables for the equations above:
 * \[L_{f}\]
       Length from front to the center of gravity of the car
-* \[f(x)\]
-      Nth order polynomial(used 3rd order for this project)
-* \[psides_{t} = -arctan(f'(x))\]
+* \[f(x_{t})\]
+      Nth order polynomial evaluated at x_t(used 3rd order for this project)
+* \[psides_{t} = -arctan(f'(x_{t}))\]
       Desired heading angle
 
 Below is an image which shows the vehicle with the state at different times, considering a vehicle moving at velocity `'v'` with a heading angle `'psi'` at different times.
@@ -122,7 +122,7 @@ The `lake_track_waypoints.csv` file has the waypoints of the lake track. You cou
 
 > **NOTE:**
 > * The option in step 4 is setting the reference velocity. This is completely optional for the user. If no parameter is passed in, the default reference velocity is 60mph.
-> * The maximum reference velocity tested on this project is 80mph, so if the user passes in a reference velocity >80mph the code caps the reference velocity to 80mph.
+> * The maximum reference velocity tested on this project is 80mph, so if the user passes in a reference velocity >80mph, the code caps the reference velocity to 80mph.
 
 ## Discussion
 Model predictive control is a simple algorithm which is driven mainly by the cost function. The cost function dictates the actuator (steering angle & throttle) magnitude at each time step for the current prediction horizon. This translates into how the car moves in the simulator at each time step when the actuation is applied. The cost function is passed in to the IPOPT optimizer along with the state variables, actuator variables and their respective constraints. IPOPT is an open source software package for solving non-linear programming problems. This software requires that the jacobians and hessians are passed directly - it does not compute them for us. A library called CppAD is used for doing exactly this and is used in this project.
@@ -150,14 +150,14 @@ My tuning process lead to the following final weights for `N=8` and `dt=0.1`:
 | deltime       |  45000.0      | Reduces sharp steering spikes over time |
 | atime         |  1.0          | Reduces sharp acceleration over time |
 
-As one can see from the table, the highest weights are for reducing sharp steering spikes over time and magnitude of steering turns. This makes sense because we don't want to make really sharp turns at particular speeds and make the car go out of control. The relatively higher weights for reducing cross track error and heading error also makes sense because we want to focus on getting back on track with respect to a reference lane by reducing the error.
+As one can see from the table, the highest weights are for reducing sharp steering spikes over time and magnitude of steering turns. This makes sense because we don't want to make really sharp turns at a particular velocity and make the car go out of control. The relatively higher weights for reducing cross track error and heading error also makes sense because we want to focus on getting back on track with respect to a reference lane by reducing the error.
 
 The deviation of velocity and the acceleration over time components have a weight of 1.0 because the focus of the model is to follow a reference lane but to still have enough room to achieve higher speeds when possible. This is also the reason why I set the weight for the acceleration component even lower than 0.5 because we want to accelerate quickly when possible.
 
 ### Simulation Results
 The effect of the weights of each components can be seen in two videos of my model running at two different reference velocity's (`data/simulator/`).
 
-The following gif is from a portion of the video with the reference velocity set at 60mph. As one can see in the video the driving is pretty smooth with the cross track error being very minimal (green representing predictions and yellow representing the reference lane). One thing to definitely notice is the constant braking when the speed hits 60mph, this is because model although the model allows room for higher acceleration the speed is capped at 60mph.
+The following gif is from a portion of the video with the reference velocity set at 60mph. As one can see in the video the driving is pretty smooth with the cross track error being very minimal (green representing predictions and yellow representing the reference lane). One thing to definitely notice is the constant braking when the velocity hits 60mph, this is because although the model allows room for higher acceleration the velocity is capped at 60mph.
 
 <p align="center">
    <img src="data/simulator/Short60mph.gif">
@@ -166,9 +166,9 @@ The following gif is from a portion of the video with the reference velocity set
    <i>Figure 2: Reference velocity at 60mph</i>
 </p>
 
-The next is a gif of the same portion of the track but with the reference velocity set at 80mph. The drive is very different at higher speeds:
+The next is a gif of the same portion of the track but with the reference velocity set at 80mph. The drive is very different at a higher velocity:
 * CTE is higher at sharp corners
-* The car tends to be at the edge of the lane in order to make the corners at higher speeds
+* The car tends to be at the edge of the lane in order to make the corners at a higher speed
 * The braking is less frequent because there is more room for acceleration
 
 <p align="center">
@@ -179,13 +179,22 @@ The next is a gif of the same portion of the track but with the reference veloci
 </p>
 
 ### Reducing frequency of MPC execution
-In this project, MPC algorithm is run every time there is a socket message from the simulator. In a separate git branch on this repo(speed-tinker), I tinkered with running MPC only once every 3 messages. Reducing the number of times MPC is run still works. The car still makes a lap around the track with even better smoothness at higher speeds.
+In this project, MPC algorithm is run every time there is a socket message from the simulator. In a separate git branch on this repo(speed-tinker), I tinkered with running MPC only once every 3 messages. Reducing the number of times MPC is run still works. The car still makes a lap around the track with even no noticeable change in smoothness at higher velocity.
 
-One thing which is noticeable though is the abrupt braking at random points and not when the car actually goes beyond the reference velocity. This can be probably attributed to the delay in application of actuation(100ms)
+One thing which is noticeable is the abrupt braking at random points and not when the car actually goes beyond the reference velocity. This can be probably attributed to the delay in application of actuation(100ms). Below is a gif (from the video) which shows this type of behavior.
+
+<p align="center">
+   <img src="data/simulator/Short80mph3iter.gif">
+</p>
+<p align="center">
+   <i>Figure 4: Reduced frequency with reference velocity run at 80mph</i>
+</p>
 
 ## Final thoughts
-1. MPC works really well even at higher speeds, I was able to make the car successfully run laps around the track with a reference velocity as high as 80mph
+1. MPC works really well even at higher reference velocity, I was able to make the car successfully run laps around the track with a reference velocity as high as 80mph
 
 2. MPC leads to a smoother drive when compared to PID, this is because a more complex vehicle model is used for controlling the steering angle and throttle.
 
 3. This project uses kinematic models which ignores internal vehicle dynamics because the model is tested on a car running in a simulator. Vehicle dynamics can be incorporated into the model to lead to even better performance.
+
+4. Optimization can be done to run MPC less often. Run MPC once every 'k' intervals instead of running after each set of actuations.
