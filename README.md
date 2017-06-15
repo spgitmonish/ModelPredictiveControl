@@ -1,10 +1,82 @@
-# CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+# Model Predictive Control
 
----
+## Introduction
+In this project, I implemented a C++ MPC (Model Predictive Control) model to control the steering angle and throttle of a vehicle running on a simulator. MPC is an advanced method of process control that has been used since the 1980's. The advantage of MPC is that it predicts the control action for the current timeslot while taking future actions into account. This achieved by optimizing a finite time horizon `'T'` with `'N'` timeslots of duration `'dt'` each (`T = N * dt`). Once the control action is applied for the current time step, the future predictions are discarded and the process is repeated again.
 
-## Dependencies
+In this project, MPC uses a kinematic model and not the dynamic model. The dynamic model, which considers internal vehicle dynamics along with dynamics of a car in an environment, is not used because the car is being run in a simulator and the car internal dynamics are not obvious.
 
+In my PID controller project (https://github.com/spgitmonish/PIDController) the cross track error is used as the input to the PID controller to control steering angle. The model PID controller is based on seems simpler when compared to MPC which has the advantage of predicting future events with a much more complex model. Thus, MPC works much better than PID and it can be seen in this project as well with the smoothness of the drive.
+
+> **NOTE:**
+> An additional advantage with MPC is that the two actuators are incorporated into the model as variables. But in case of PID, two separate controllers are required to control steering angle and throttle.
+
+## Project
+The goal of this project is to implement a MPC model which controls the steering angle and speed(using throttle) of a car in a simulator. MPC uses the kinematic model for modeling the dynamics of the vehicle in the environment. The state of the vehicle in this environment is determined by a vector containing 6 components `['x', 'y', 'psi', 'v', 'cte', 'epsi']`
+
+In this project MPC dictates two control variables, steering angle`('delta')` and throttle`('a')`. These two variables have a say in the state of the vehicle at time `'t+1'`:
+
+* \[x_{t+1} = x_{t} + v_{t} * cos(psi_{t}) * dt\]
+      Position of the car in x direction
+* \[y_{t+1} = y_{t} + v_{t} * sin(psi_{t}) * dt\]
+      Position of the car in y direction  
+* \[psi_{t+1} = psi_{t} + (v_{t}/L_{f}) * delta * dt\]
+      Heading angle of the car
+* \[v_{t+1} = v_{t} + a * dt\]
+      Velocity of the car
+* \[cte_{t+1} = f(x) - y_{t} + v_{t} * sin(epsi_{t}) * dt\]
+      Cross track error of the car from the reference
+* \[epsi_{t+1} = psi_{t} - psides{t} + (v_{t}/L_{f}) * delta * dt\]
+      Heading angle error of the car
+
+The following are the dependent variables for the equations above:
+* \[L_{f}\]
+      Length from front to the the center of gravity of the car
+* \[f(x)\]
+      Nth order polynomial(used 3rd order polynomial for this project)
+* \[psides = -arctan(f'(x))\]
+      Desired heading angle
+
+Attached is an image which shows the vehicle with the model representing the state at different times considering a vehicle moving at velocity `'v'` with a heading angle `'psi'` at different times.
+
+<p align="center">
+   <img src="data/images/VehicleModel.png">
+</p>
+<p align="center">
+   <i>Figure 1: Kinematic Models</i>
+</p>
+
+### Implementation
+Below is the directory structure of this repository.
+
+```
+root
+|   CMakeLists.txt
+|   DATA.md
+|   install_ipopt.sh
+|   install-mac.sh
+|   install-ubuntu.sh
+|   lake_track_waypoints.csv
+|   README.md
+|
+|___data
+|   |___images
+|   |___simulator
+|   
+|___src
+    |   Eigen-3.3
+    |   helper.h
+    |   json.hpp
+    |   main.cpp
+    |   MPC_prv.h
+    |   MPC.cpp
+    |   MPC.h
+```
+
+The main logic for MPC is in the files starting in the files starting with the letters MPC. `main.cpp` does have some logic for setting up the waypoints from the perspective of the car, calculating the coefficients of 3rd order polynomial using the way points and setting up the initial state of the vehicle for MPC.
+
+The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve.
+
+### Dependencies
 * cmake >= 3.5
  * All OSes: [click here for installation instructions](https://cmake.org/install/)
 * make >= 4.1
@@ -13,13 +85,13 @@ Self-Driving Car Engineer Nanodegree Program
   * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
 * gcc/g++ >= 5.4
   * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
+  * Mac: same deal as make - [install Xcode command line tools](https://developer.apple.com/xcode/features/)
   * Windows: recommend using [MinGW](http://www.mingw.org/)
 * [uWebSockets](https://github.com/uWebSockets/uWebSockets)
   * Run either `install-mac.sh` or `install-ubuntu.sh`.
   * If you install from source, checkout to commit `e94b6e1`, i.e.
     ```
-    git clone https://github.com/uWebSockets/uWebSockets 
+    git clone https://github.com/uWebSockets/uWebSockets
     cd uWebSockets
     git checkout e94b6e1
     ```
@@ -31,7 +103,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Mac: `brew install ipopt`
   * Linux
     * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
-    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`. 
+    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`.
   * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
 * [CppAD](https://www.coin-or.org/CppAD/)
   * Mac: `brew install cppad`
@@ -42,74 +114,68 @@ Self-Driving Car Engineer Nanodegree Program
 * Not a dependency but read the [DATA.md](./DATA.md) for a description of the data sent back from the simulator.
 
 
-## Basic Build Instructions
-
-
+### Basic Build Instructions
 1. Clone this repo.
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./mpc`.
+4. Run it: `./mpc 80`
 
-## Tips
+> **NOTE:**
+> * The option in step 4 is setting the reference velocity. This is completely optional for the user. If no parameter is passed in, the default reference velocity is 60mph.
+> * The maximum reference velocity tested on this project is 80mph, so if the user passes in a reference velocity >80mph the code caps the reference velocity to 80mph.
 
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
+## Discussion
+Model predictive control is a simple algorithm which is driven mainly by the cost function. The cost function dictates the actuator (steering angle & throttle) magnitude at each time step for the current prediction horizon. This translates into how the car moves in the simulator at each time step when the actuation is applied. The cost function is passed in to the IPOPT optimizer along with the state variables, actuator variables and their respective constraints. IPOPT is an open source software package for solving non-linear programming problems. This software requires that the jacobians and hessians are passed directly - it does not compute them for us. A library called CppAD is used for doing exactly this and is used in this project.
 
-## Editor Settings
+### Prediction horizon
+`N=8` and `dt=0.1` gave pretty good results without leading to wild oscillations. I did play around with values of `N` starting from 20 and going down 8. And `dt` starting at 0.05 and going up to 0.1. The actuation delay played a big factor in deciding the values for the components of the prediction horizon `T = N * dt`.
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+### Cost Components
+In this project the cost function is the sum of square of 7 error components at each time step `'N'` of prediction the horizon `'T'` of duration `'dt'` . Each of these components have a weight multiplied, signifying their impact in finding the optimal solution (using IPOPT) for this non-linear problem. The cost function with the 7 components is defined as follows:
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+\[\sum_{t=1}^{N} w_{cte} * cte_t^2 + w_{epsi} * epsi_t^2 + w_{v} * (v_t - v_{ref})^2 + w_{delta} * delta_t^2 + w_{a} * a_t^2 + w_{deltime} * (delta_t - delta_{t-1})^2 + w_{atime} * (a_t - a_{t-1})^2\]
 
-## Code Style
+### Tuning weights
+MPC tunes steering angle and throttle to reduce cross track error(cte) and maintain low cte with respect to a reference track. If one puts their driving hat on, and tries to follow a lane as accurately as possible, they would try modify the steering angle to reduce the heading angle with respect to the reference lane. And this process of thought can be applied to the weight tuning as well.
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+My tuning process lead to the following final weights for `N=8` and `dt=0.1`:
 
-## Project Instructions and Rubric
+| Component     | Final Weight  | Effect |
+|:-------------:|:-------------:|:-------------:|
+| cte           |  20.0         | Reduces oscillation |
+| epsi          |  10.0         | Reduces heading error |
+| v_t - v_ref   |  1.0          | Reduces deviation from reference velocity |
+| delta         |  500.0        | Reduces magnitude of steering turns |
+| a             |  0.5          | Reduces magnitude of acceleration |
+| deltime       |  45000.0      | Reduces sharp steering spikes over time |
+| atime         |  1.0          | Reduces sharp acceleration over time |
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+As one can see from the table, the highest weights are for reducing sharp steering spikes over time and magnitude of steering turns. This makes sense because we don't want to make really sharp turns at particular speeds and make the car go out of control. The relatively higher weights for reducing cross track error and heading error also makes sense because we want to focus on getting back on track with respect to a reference lane by reducing the error.
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
+The deviation of velocity and the acceleration over time components have a weight of 1.0 because the focus of the model is to follow a reference lane but still have enough room to achieve higher speeds when possible. This is also the reason why I set the weight for the acceleration component even lower than 0.5 because we want to accelerate quickly when possible.
 
-## Hints!
+### Simulation Results
+The effect of the weights of each components can be seen in two videos of my model running at two different reference velocity's (`data/simulator/`).
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
+The following gif is from a portion of the video with the reference velocity set at 60mph. As one can see in the video the driving is pretty smooth with the cross track error being very minimal (green representing predictions and yellow representing the reference lane). One thing to definitely notice is the constant braking when the speed hits 60mph, this is because model although the model allows room for higher acceleration but the speed is capped at 60mph.
 
-## Call for IDE Profiles Pull Requests
+<p align="center">
+   <img src="data/simulator/Short60mph.gif">
+</p>
+<p align="center">
+   <i>Figure 2: Reference velocity at 60mph</i>
+</p>
 
-Help your fellow students!
+The next is a gif of the same portion of the track but with the reference velocity set at 80mph. The drive is very different at higher speeds:
+* CTE is higher at the sharp corners,
+* The car tends to be at the edge of the lane in order to make the corners
+* The braking is less frequent because there is more room for acceleration.
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
+<p align="center">
+   <img src="data/simulator/Short80mph.gif">
+</p>
+<p align="center">
+   <i>Figure 3: Reference velocity at 80mph</i>
+</p>
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+## Final thoughts
