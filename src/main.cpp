@@ -54,6 +54,10 @@ int main(int argc, char** argv)
   // MPC object
   MPC mpc;
 
+  // Variable to store the previous state
+  previous_state mpc_prev_state;
+  mpc_prev_state.run_mpc_counter = 0;
+
   // Assert if the number of arguments passed in is more than 2.
   // Including the there is only one additional argument, the velocity
   assert(argc<=2 && "Only 1(velocity) argument can be passed in!");
@@ -86,7 +90,7 @@ int main(int argc, char** argv)
   // The configuration is loaded from a constant object of the same type
   loaded_config = config_default;
 
-  h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
+  h.onMessage([&mpc, &mpc_prev_state](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode)
   {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -116,82 +120,99 @@ int main(int argc, char** argv)
           double steer_value;
           double throttle_value;
 
-          // Initial state
-          Eigen::VectorXd state(6);
-
-          // Polynomial coefficients
-          Eigen::VectorXd coeffs;
-
-          // Eigen vectors for storing the converted co-ordinates
-          Eigen::VectorXd xvals(ptsx.size());
-          Eigen::VectorXd yvals(ptsy.size());
-
-          // Copy the data into Eigen vectors after converting to car-cordinates
-          for(size_t index = 0; index < ptsx.size(); index++)
+          if(mpc_prev_state.run_mpc_counter % 3 == 0)
           {
-            xvals[index] = (ptsx[index] - px) * cos(psi) + (ptsy[index] - py) * sin(psi);
-            yvals[index] = (ptsy[index] - py) * cos(psi) - (ptsx[index] - px) * sin(psi);
+            // Initial state
+            Eigen::VectorXd state(6);
+
+            // Polynomial coefficients
+            Eigen::VectorXd coeffs;
+
+            // Eigen vectors for storing the converted co-ordinates
+            Eigen::VectorXd xvals(ptsx.size());
+            Eigen::VectorXd yvals(ptsy.size());
+
+            // Copy the data into Eigen vectors after converting to car-cordinates
+            for(size_t index = 0; index < ptsx.size(); index++)
+            {
+              xvals[index] = (ptsx[index] - px) * cos(psi) + (ptsy[index] - py) * sin(psi);
+              yvals[index] = (ptsy[index] - py) * cos(psi) - (ptsx[index] - px) * sin(psi);
+            }
+
+            // Fit a 3rd order polynomial for the x, y data
+            // NOTE: The assumption made here is that len of x and y are equal,
+            //       this is a good case for adding in an Assert
+            coeffs = polyfit(xvals, yvals, 3);
+
+            // Using the coefficients of the polynomial find the cross track error
+            // At the origin of the car
+            // NOTE: Cross track error is calculated along the 'y' direction
+            double cte = polyeval(coeffs, 0) - 0;
+
+            // Calculate the orientation error
+            // NOTE 1: The desired orientation is calculated as f'(x)
+            //       The polynomial, f(x):
+            //       coeffs[0] + coeffs[1] * x + coeffs[2] * x^2 + coeffs[3] * x^3
+            //       The derivative, f'(x):
+            //       coeffs[1] + 2 * coeffs[2] * x + 3 * coeffs[3] * x^2
+            // NOTE 2: Due to psi starting at 0 the orientation error is -f'(x).
+            // NOTE 3: Since the initial state is (0, 0) the only non-zero term
+            //         remaining is coeffs[1]
+            double epsi = -CppAD::atan(coeffs[1]);
+
+            // Set up the state vector
+            state << 0, 0, 0, v, cte, epsi;
+
+            // Calculate the new state
+            mpc_output vars = mpc.Solve(state, coeffs);
+
+            // Set up the steering and throttle values
+            // NOTE: Both are in between [-1, 1] for the simulator
+            steer_value = vars.steer_angle;
+            throttle_value = vars.throttle;
+
+            // Display the MPC predicted trajectory
+            vector<double> mpc_x_vals = vars.pred_x_vals;
+            vector<double> mpc_y_vals = vars.pred_y_vals;
+
+            // Display the waypoints/reference line
+            // NOTE: The way point where the car is currently is not displayed because
+            //       it leads to a reference line being drawn behind the car as well
+            //       in the simulator
+            vector<double> next_x_vals(xvals.data() + 1, xvals.data() + xvals.size() - 1);
+            vector<double> next_y_vals(yvals.data() + 1, yvals.data() + yvals.size() - 1);
+
+            // Set it to false
+            mpc_prev_state.run_mpc_counter = 1;
+            mpc_prev_state.steer_value = steer_value;
+            mpc_prev_state.throttle_value = throttle_value;
+            mpc_prev_state.mpc_x_vals = mpc_x_vals;
+            mpc_prev_state.mpc_y_vals = mpc_y_vals;
+            mpc_prev_state.next_x_vals = next_x_vals;
+            mpc_prev_state.next_y_vals = next_y_vals;
           }
-
-          // Fit a 3rd order polynomial for the x, y data
-          // NOTE: The assumption made here is that len of x and y are equal,
-          //       this is a good case for adding in an Assert
-          coeffs = polyfit(xvals, yvals, 3);
-
-          // Using the coefficients of the polynomial find the cross track error
-          // At the origin of the car
-          // NOTE: Cross track error is calculated along the 'y' direction
-          double cte = polyeval(coeffs, 0) - 0;
-
-          // Calculate the orientation error
-          // NOTE 1: The desired orientation is calculated as f'(x)
-          //       The polynomial, f(x):
-          //       coeffs[0] + coeffs[1] * x + coeffs[2] * x^2 + coeffs[3] * x^3
-          //       The derivative, f'(x):
-          //       coeffs[1] + 2 * coeffs[2] * x + 3 * coeffs[3] * x^2
-          // NOTE 2: Due to psi starting at 0 the orientation error is -f'(x).
-          // NOTE 3: Since the initial state is (0, 0) the only non-zero term
-          //         remaining is coeffs[1]
-          double epsi = -CppAD::atan(coeffs[1]);
-
-          // Set up the state vector
-          state << 0, 0, 0, v, cte, epsi;
-
-          // Calculate the new state
-          mpc_output vars = mpc.Solve(state, coeffs);
-
-          // Set up the steering and throttle values
-          // NOTE: Both are in between [-1, 1] for the simulator
-          steer_value = vars.steer_angle;
-          throttle_value = vars.throttle;
+          else
+          {
+            // Set it back to true
+            mpc_prev_state.run_mpc_counter += 1;
+          }
 
           json msgJson;
           // NOTE: Divide by deg2rad(20) before you send the steering value back.
           //       Normalizing values between [-1, 1].
-          msgJson["steering_angle"] = -steer_value/deg2rad(25);
-          msgJson["throttle"] = throttle_value;
-
-          // Display the MPC predicted trajectory
-          vector<double> mpc_x_vals = vars.pred_x_vals;
-          vector<double> mpc_y_vals = vars.pred_y_vals;
+          msgJson["steering_angle"] = -mpc_prev_state.steer_value/deg2rad(25);
+          msgJson["throttle"] = mpc_prev_state.throttle_value;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
-          msgJson["mpc_x"] = mpc_x_vals;
-          msgJson["mpc_y"] = mpc_y_vals;
-
-          // Display the waypoints/reference line
-          // NOTE: The way point where the car is currently is not displayed because
-          //       it leads to a reference line being drawn behind the car as well
-          //       in the simulator
-          vector<double> next_x_vals(xvals.data() + 1, xvals.data() + xvals.size() - 1);
-          vector<double> next_y_vals(yvals.data() + 1, yvals.data() + yvals.size() - 1);
+          msgJson["mpc_x"] = mpc_prev_state.mpc_x_vals;
+          msgJson["mpc_y"] = mpc_prev_state.mpc_y_vals;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
-          msgJson["next_x"] = next_x_vals;
-          msgJson["next_y"] = next_y_vals;
+          msgJson["next_x"] = mpc_prev_state.next_x_vals;
+          msgJson["next_y"] = mpc_prev_state.next_y_vals;
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
         #if DEBUG_VERBOSE

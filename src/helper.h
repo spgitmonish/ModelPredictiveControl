@@ -4,6 +4,22 @@
 // Flag for enabling verbose debug
 #define DEBUG_VERBOSE DEBUG && 0
 
+// Structure to store the previous state of MPC
+typedef struct previous_state
+{
+  double steer_value;
+  double throttle_value;
+
+  vector<double> mpc_x_vals;
+  vector<double> mpc_y_vals;
+
+  vector<double> next_x_vals;
+  vector<double> next_y_vals;
+
+  // boolean to toggle MPC run
+  int run_mpc_counter;
+} previous_state;
+
 // Function definitions
 // Evaluate a polynomial.
 double polyeval(Eigen::VectorXd coeffs, double x)
