@@ -56,6 +56,7 @@ int main(int argc, char** argv)
 
   // Variable to store the previous state
   previous_state mpc_prev_state;
+  // Initially by default run mpc
   mpc_prev_state.run_mpc_counter = 0;
 
   // Assert if the number of arguments passed in is more than 2.
@@ -120,6 +121,7 @@ int main(int argc, char** argv)
           double steer_value;
           double throttle_value;
 
+          // Run MPC only when count is zero
           if(mpc_prev_state.run_mpc_counter % 3 == 0)
           {
             // Initial state
@@ -182,7 +184,7 @@ int main(int argc, char** argv)
             vector<double> next_x_vals(xvals.data() + 1, xvals.data() + xvals.size() - 1);
             vector<double> next_y_vals(yvals.data() + 1, yvals.data() + yvals.size() - 1);
 
-            // Set it to false
+            // Set count back to 1
             mpc_prev_state.run_mpc_counter = 1;
             mpc_prev_state.steer_value = steer_value;
             mpc_prev_state.throttle_value = throttle_value;
@@ -193,7 +195,7 @@ int main(int argc, char** argv)
           }
           else
           {
-            // Set it back to true
+            // Increment count
             mpc_prev_state.run_mpc_counter += 1;
           }
 

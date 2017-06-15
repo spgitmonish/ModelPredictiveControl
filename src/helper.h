@@ -7,16 +7,19 @@
 // Structure to store the previous state of MPC
 typedef struct previous_state
 {
+  // Previous steering angle and throttle output from MPC
   double steer_value;
   double throttle_value;
 
+  // Previous predicted way points
   vector<double> mpc_x_vals;
   vector<double> mpc_y_vals;
 
+  // Previous reference way points
   vector<double> next_x_vals;
   vector<double> next_y_vals;
 
-  // boolean to toggle MPC run
+  // Counter to keep track of when to run MPC
   int run_mpc_counter;
 } previous_state;
 
