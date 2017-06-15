@@ -130,6 +130,9 @@ Model predictive control is a simple algorithm which is driven mainly by the cos
 ### Prediction horizon
 `N=8` and `dt=0.1` gave pretty good results without leading to wild oscillations. I did play around with values of `N` starting from 20 and going down 8. And `dt` starting at 0.05 and going up to 0.1. The actuation delay played a big factor in deciding the values for the components of the prediction horizon `T = N * dt`.
 
+### Accounting for latency
+To account for the latency in actuation, I used the vehicle model(as detailed above) to predict the state after 100ms and used that as the initial state for the MPC algorithm.
+
 ### Cost Components
 The cost function is the sum of square of 7 error components at each time step `'N'` of the prediction horizon `'T'` . Each of these components have a weight multiplied, signifying their impact in finding the optimal solution (using IPOPT) for this non-linear problem. The cost function with the 7 components is defined as follows:
 
