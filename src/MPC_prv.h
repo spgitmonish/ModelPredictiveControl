@@ -1,5 +1,4 @@
 // Set the timestep length and duration
-// NOTE: These are set to default values
 size_t N;
 double dt;
 

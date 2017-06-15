@@ -239,7 +239,6 @@ mpc_output MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   // Account for the lag(100ms = 0.1s) in actuator execution
   // The next state after 100ms is calculated using the vehicle model
   double lag = 0.1;
-
   x = x + v * cos(psi) * lag;
   y = y + v * sin(psi) * lag;
   psi = psi + (v/Lf) * prev_delta * lag;
@@ -292,7 +291,7 @@ mpc_output MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   // Place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
 
-  // solve the problem
+  // Solve the non-linear problem using IPOPT
   CppAD::ipopt::solve<Dvector, FG_eval>(options, vars, vars_lowerbound,
                                         vars_upperbound, constraints_lowerbound,
                                         constraints_upperbound, fg_eval, solution);
@@ -320,7 +319,7 @@ mpc_output MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   // Copy the solution from the optimizer into a temporary variable
   auto sol_x = solution.x;
 
-  // Store the x and y values from the solution
+  // Store the predicted 'x' and 'y' values from the solution
   // NOTE: .data() method of the class returns the pointer to the first element.
   //       Current (x,y) value is ignored & predicted (x, y) values are returned.
   vector<double> next_x_vals(sol_x.data() + x_start + 1, sol_x.data() + y_start - 1);
@@ -328,7 +327,7 @@ mpc_output MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs)
   solution_to_return.pred_x_vals = next_x_vals;
   solution_to_return.pred_y_vals = next_y_vals;
 
-  // Vectors of the predicted path to be returned
-  // Return the first actuator values along with the predicted path
+  // Return the object containing the first actuator values and the predicted
+  // (x, y) values 
   return solution_to_return;
 }

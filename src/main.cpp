@@ -67,9 +67,7 @@ int main(int argc, char** argv)
   }
   else
   {
-    // Get the velocity argument and convert it into integer if it's a valid value
-    // NOTE: The only supported value is '40', '60' & '80'.
-    //       Default config is for 40mph
+    // Get the velocity argument and convert it into integer
     ref_v = atoi(argv[1]);
 
     // Print a message for the user
@@ -134,12 +132,10 @@ int main(int argc, char** argv)
           }
 
           // Fit a 3rd order polynomial for the x, y data
-          // NOTE: The assumption made here is that len of x and y are equal,
-          //       this is a good case for adding in an Assert
           coeffs = polyfit(xvals, yvals, 3);
 
           // Using the coefficients of the polynomial find the cross track error
-          // At the origin of the car
+          // At the origin of the car co-ordinates (0, 0)
           // NOTE: Cross track error is calculated along the 'y' direction
           double cte = polyeval(coeffs, 0) - 0;
 
@@ -151,7 +147,7 @@ int main(int argc, char** argv)
           //       coeffs[1] + 2 * coeffs[2] * x + 3 * coeffs[3] * x^2
           // NOTE 2: Due to psi starting at 0 the orientation error is -f'(x).
           // NOTE 3: Since the initial state is (0, 0) the only non-zero term
-          //         remaining is coeffs[1]
+          //         remaining in f'(x) is coeffs[1]
           double epsi = -CppAD::atan(coeffs[1]);
 
           // Set up the state vector
@@ -166,8 +162,8 @@ int main(int argc, char** argv)
           throttle_value = vars.throttle;
 
           json msgJson;
-          // NOTE: Divide by deg2rad(20) before you send the steering value back.
-          //       Normalizing values between [-1, 1].
+          // Divide by deg2rad(25) before sending the steering value back.
+          // NOTE: Normalizing values between [-1, 1].
           msgJson["steering_angle"] = -steer_value/deg2rad(25);
           msgJson["throttle"] = throttle_value;
 
@@ -177,7 +173,6 @@ int main(int argc, char** argv)
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
-
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 

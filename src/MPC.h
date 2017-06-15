@@ -11,7 +11,7 @@ using namespace std;
 // Use the Vector type for CPPAD library
 typedef CPPAD_TESTVECTOR(double) Dvector;
 
-// Structure for storing the different configurations for speed
+// Structure for storing the configurations of MPC
 typedef struct mpc_speed_config
 {
   // Number of timesteps
@@ -30,14 +30,12 @@ typedef struct mpc_speed_config
   double w_a_time;
 } mpc_speed_config;
 
-// Objects of type mpc_speed_config with different configurations for different
-// speeds, the speed is set during execution of the object file.
-// This is the default config tuned for 40mph
+// This is the default config tuned for all speeds
 const mpc_speed_config config_default = {
   8,     // Number of timesteps
   0.1,   // Duration of timestep
   20.0,  // Weight for cross track error cost element
-  10.0,   // Weight for heading error cost element
+  10.0,  // Weight for heading error cost element
   1.0,   // Weight velocity error cost element
   500.0, // Weight for heading magnitude cost element
   0.5,   // Weight for acceleration magnitude cost element
@@ -97,7 +95,6 @@ public:
   virtual ~MPC();
 
   // Solve the model given an initial state and polynomial coefficients.
-  // Return the first actuatotions.
   mpc_output Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
 };
 
