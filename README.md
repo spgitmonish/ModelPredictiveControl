@@ -28,7 +28,7 @@ x_t_+_1 = x_t  \, + \, v_t \, * \, cos(psi_t) \, * \,  dt\textup{ - Position of 
 
 \textup{ }\,\,\,\,cte_t_+_1 = cte_t \, + \, f(x_t) \, - \, y_t \, + \, v_t \, * \, sin(epsi_t) \, * \, dt\textup{ - Cross track error from reference}\\
 
-\textup{ }\;epsi_t_+_1 = psi_t - psides_t + (v_t/L_f) * delta_t * dt)\textup{ - Heading angle error of the car}-->
+\textup{ }\;epsi_t_+_1 = psi_t \, - \, psides_t \,+ \,(v_t/L_f) \,* delta_t \,* \,dt)\textup{ - Heading angle error of the car}-->
 
 <p align="center">
    <img src="data/images/EquationsSet1.gif">
