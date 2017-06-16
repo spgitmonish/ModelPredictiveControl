@@ -15,26 +15,38 @@ The goal of this project is to implement a MPC model which controls the steering
 
 In this project, MPC dictates two control variables, steering angle`('delta')` and throttle`('a')`. These two variables have a say in the state of the vehicle at time `'t+1'`:
 
-* \[x_{t+1} = x_{t} + v_{t} * cos(psi_{t}) * dt\]
-      Position of the car in x direction
-* \[y_{t+1} = y_{t} + v_{t} * sin(psi_{t}) * dt\]
-      Position of the car in y direction  
-* \[psi_{t+1} = psi_{t} + (v_{t}/L_{f}) * delta_{t} * dt\]
-      Heading angle of the car
-* \[v_{t+1} = v_{t} + a_{t} * dt\]
-      Velocity of the car
-* \[cte_{t+1} = cte_{t} + f(x_{t}) - y_{t} + v_{t} * sin(epsi_{t}) * dt\]
-      Cross track error of the car from the reference
-* \[epsi_{t+1} = psi_{t} - psides_{t} + (v_{t}/L_{f}) * delta_{t} * dt\]
-      Heading angle error of the car
+<!--
+NOTE: This was the syntax used to generate the equations in this image
+
+x_t_+_1 = x_t  \, + \, v_t \, * \, cos(psi_t) \, * \,  dt\textup{ - Position of the car in x direction}\\
+
+\textup{ }\,\,\,\,\,\,\,y_t_+_1 = y_t  \, + \, v_t  \, *  \, sin(psi_t)  \, *  \, dt\textup{ - Position of the car in y direction}\\
+
+\textup{ }\,\,\,psi_t_+_1 = psi_t \, + \, (v_t/L_f) \,* \,delta_t \,* \,dt\textup{ - Heading angle of the car}\\
+
+\textup{ }\;\;\;\,\,\,v_t_+_1 = v_t \, + \,a_t \,* \,dt\textup{ - Velocity of the car}\\
+
+\textup{ }\,\,\,\,cte_t_+_1 = cte_t \, + \, f(x_t) \, - \, y_t \, + \, v_t \, * \, sin(epsi_t) \, * \, dt\textup{ - Cross track error from reference}\\
+
+\textup{ }\;epsi_t_+_1 = psi_t - psides_t + (v_t/L_f) * delta_t * dt)\textup{ - Heading angle error of the car}-->
+
+<p align="center">
+   <img src="data/images/EquationsSet1.gif">
+</p>
 
 The following are the dependent variables for the equations above:
-* \[L_{f}\]
-      Length from front to the center of gravity of the car
-* \[f(x_{t})\]
-      Nth order polynomial evaluated at x_t(used 3rd order for this project)
-* \[psides_{t} = -arctan(f'(x_{t}))\]
-      Desired heading angle
+
+<!--
+NOTE: The following syntax was used for the equations below
+L_f \textup{ - Length from the front to the center of gravity of the car}\\
+
+\textup{ }\,\,\,f(x_t)\textup{ - Nth order polynomial(used 3rd order for this project)}\\
+
+\textup{ }\,\,psides_t = -arctan(f'(x_t))\textup{ - Desired heading angle}-->
+
+<p align="center">
+   <img src="data/images/EquationsSet2.gif">
+</p>
 
 Below is an image which shows the vehicle with the state at different times, considering a vehicle moving at velocity `'v'` with a heading angle `'psi'` at different times.
 
