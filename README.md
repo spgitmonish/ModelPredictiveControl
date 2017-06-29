@@ -145,6 +145,9 @@ Model predictive control is a simple algorithm which is driven mainly by the cos
 ### Accounting for latency
 To account for the latency in actuation, I used the vehicle model(as detailed above) to predict the state after 100ms and used that as the initial state for the MPC algorithm.
 
+> **NOTE:**
+Since the latency is in seconds, the reference and the state velocity were converted from mph to m/s. 
+
 ### Cost Components
 The cost function is the sum of square of 7 error components at each time step `'N'` of the prediction horizon `'T'` . Each of these components have a weight multiplied, signifying their impact in finding the optimal solution (using IPOPT) for this non-linear problem. The cost function with the 7 components is defined as follows:
 
@@ -157,12 +160,12 @@ My tuning process lead to the following final weights for `N=8` and `dt=0.1`:
 
 | Component     | Final Weight  | Effect |
 |:-------------:|:-------------:|:-------------:|
-| cte           |  20.0         | Reduces oscillation |
-| epsi          |  10.0         | Reduces heading error |
+| cte           |  100.0        | Reduces oscillation |
+| epsi          |  5000.0       | Reduces heading error |
 | v_t - v_ref   |  1.0          | Reduces deviation from reference velocity |
-| delta         |  500.0        | Reduces magnitude of steering turns |
+| delta         |  10000.0      | Reduces magnitude of steering turns |
 | a             |  0.5          | Reduces magnitude of acceleration |
-| deltime       |  45000.0      | Reduces sharp steering spikes over time |
+| deltime       |  10000.0      | Reduces sharp steering spikes over time |
 | atime         |  1.0          | Reduces sharp acceleration over time |
 
 As one can see from the table, the highest weights are for reducing sharp steering spikes over time and magnitude of steering turns. This makes sense because we don't want to make really sharp turns at a particular velocity and make the car go out of control. The relatively higher weights for reducing cross track error and heading error also makes sense because we want to focus on getting back on track with respect to a reference lane by reducing the error.
@@ -191,18 +194,6 @@ The next is a gif of the same portion of the track but with the reference veloci
 </p>
 <p align="center">
    <i>Figure 3: Reference velocity at 80mph</i>
-</p>
-
-### Reducing frequency of MPC execution
-In this project, MPC algorithm is run every time there is a socket message from the simulator. In a separate git branch on this repo(speed-tinker), I tinkered with running MPC only once every 3 messages. Reducing the number of times MPC is run still works. The car still makes a lap around the track with even no noticeable change in smoothness at higher velocity.
-
-One thing which is noticeable is the abrupt braking at random points and not when the car actually goes beyond the reference velocity. This can be probably attributed to the delay in application of actuation(100ms). Below is a gif (from the video) which shows this type of behavior.
-
-<p align="center">
-   <img src="data/simulator/Short80mph3iter.gif">
-</p>
-<p align="center">
-   <i>Figure 4: Reduced frequency with reference velocity run at 80mph</i>
 </p>
 
 ## Final thoughts
