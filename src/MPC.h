@@ -34,15 +34,15 @@ typedef struct mpc_speed_config
 // speeds, the speed is set during execution of the object file.
 // This is the default config tuned for 40mph
 const mpc_speed_config config_default = {
-  8,     // Number of timesteps
-  0.1,   // Duration of timestep
-  20.0,  // Weight for cross track error cost element
-  10.0,   // Weight for heading error cost element
-  1.0,   // Weight velocity error cost element
-  500.0, // Weight for heading magnitude cost element
-  0.5,   // Weight for acceleration magnitude cost element
-  45000, // Weight for heading magnitude between timesteps cost element
-  1.0,   // Weight for acceleration magnitude between timesteps cost element
+  8,        // Number of timesteps
+  0.1,      // Duration of timestep
+  100.0,    // Weight for cross track error cost element
+  5000.0,   // Weight for heading error cost element
+  1.0,      // Weight velocity error cost element
+  10000.0,  // Weight for heading magnitude cost element
+  0.5,      // Weight for acceleration magnitude cost element
+  100000.0, // Weight for heading magnitude between timesteps cost element
+  1.0,      // Weight for acceleration magnitude between timesteps cost element
 };
 
 // Extern for main.cpp to set the reference velocity

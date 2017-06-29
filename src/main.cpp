@@ -56,8 +56,6 @@ int main(int argc, char** argv)
 
   // Variable to store the previous state
   previous_state mpc_prev_state;
-  // Initially by default run mpc
-  mpc_prev_state.run_mpc_counter = 0;
 
   // Assert if the number of arguments passed in is more than 2.
   // Including the there is only one additional argument, the velocity
@@ -88,6 +86,9 @@ int main(int argc, char** argv)
     }
   }
 
+  // Convert reference velocity into m/s because the latency is in seconds
+  ref_v = ref_v * 0.447;
+
   // The configuration is loaded from a constant object of the same type
   loaded_config = config_default;
 
@@ -117,87 +118,81 @@ int main(int argc, char** argv)
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+          // Convert speed to m/s
+          v = v * 0.447;
+
           // Variables for setting steeting value and throttle
           double steer_value;
           double throttle_value;
 
-          // Run MPC only when count is zero
-          if(mpc_prev_state.run_mpc_counter % 3 == 0)
+          // Initial state
+          Eigen::VectorXd state(6);
+
+          // Polynomial coefficients
+          Eigen::VectorXd coeffs;
+
+          // Eigen vectors for storing the converted co-ordinates
+          Eigen::VectorXd xvals(ptsx.size());
+          Eigen::VectorXd yvals(ptsy.size());
+
+          // Copy the data into Eigen vectors after converting to car-cordinates
+          for(size_t index = 0; index < ptsx.size(); index++)
           {
-            // Initial state
-            Eigen::VectorXd state(6);
-
-            // Polynomial coefficients
-            Eigen::VectorXd coeffs;
-
-            // Eigen vectors for storing the converted co-ordinates
-            Eigen::VectorXd xvals(ptsx.size());
-            Eigen::VectorXd yvals(ptsy.size());
-
-            // Copy the data into Eigen vectors after converting to car-cordinates
-            for(size_t index = 0; index < ptsx.size(); index++)
-            {
-              xvals[index] = (ptsx[index] - px) * cos(psi) + (ptsy[index] - py) * sin(psi);
-              yvals[index] = (ptsy[index] - py) * cos(psi) - (ptsx[index] - px) * sin(psi);
-            }
-
-            // Fit a 3rd order polynomial for the x, y data
-            // NOTE: The assumption made here is that len of x and y are equal,
-            //       this is a good case for adding in an Assert
-            coeffs = polyfit(xvals, yvals, 3);
-
-            // Using the coefficients of the polynomial find the cross track error
-            // At the origin of the car
-            // NOTE: Cross track error is calculated along the 'y' direction
-            double cte = polyeval(coeffs, 0) - 0;
-
-            // Calculate the orientation error
-            // NOTE 1: The desired orientation is calculated as f'(x)
-            //       The polynomial, f(x):
-            //       coeffs[0] + coeffs[1] * x + coeffs[2] * x^2 + coeffs[3] * x^3
-            //       The derivative, f'(x):
-            //       coeffs[1] + 2 * coeffs[2] * x + 3 * coeffs[3] * x^2
-            // NOTE 2: Due to psi starting at 0 the orientation error is -f'(x).
-            // NOTE 3: Since the initial state is (0, 0) the only non-zero term
-            //         remaining is coeffs[1]
-            double epsi = -CppAD::atan(coeffs[1]);
-
-            // Set up the state vector
-            state << 0, 0, 0, v, cte, epsi;
-
-            // Calculate the new state
-            mpc_output vars = mpc.Solve(state, coeffs);
-
-            // Set up the steering and throttle values
-            // NOTE: Both are in between [-1, 1] for the simulator
-            steer_value = vars.steer_angle;
-            throttle_value = vars.throttle;
-
-            // Display the MPC predicted trajectory
-            vector<double> mpc_x_vals = vars.pred_x_vals;
-            vector<double> mpc_y_vals = vars.pred_y_vals;
-
-            // Display the waypoints/reference line
-            // NOTE: The way point where the car is currently is not displayed because
-            //       it leads to a reference line being drawn behind the car as well
-            //       in the simulator
-            vector<double> next_x_vals(xvals.data() + 1, xvals.data() + xvals.size() - 1);
-            vector<double> next_y_vals(yvals.data() + 1, yvals.data() + yvals.size() - 1);
-
-            // Set count back to 1
-            mpc_prev_state.run_mpc_counter = 1;
-            mpc_prev_state.steer_value = steer_value;
-            mpc_prev_state.throttle_value = throttle_value;
-            mpc_prev_state.mpc_x_vals = mpc_x_vals;
-            mpc_prev_state.mpc_y_vals = mpc_y_vals;
-            mpc_prev_state.next_x_vals = next_x_vals;
-            mpc_prev_state.next_y_vals = next_y_vals;
+            xvals[index] = (ptsx[index] - px) * cos(psi) + (ptsy[index] - py) * sin(psi);
+            yvals[index] = (ptsy[index] - py) * cos(psi) - (ptsx[index] - px) * sin(psi);
           }
-          else
-          {
-            // Increment count
-            mpc_prev_state.run_mpc_counter += 1;
-          }
+
+          // Fit a 3rd order polynomial for the x, y data
+          // NOTE: The assumption made here is that len of x and y are equal,
+          //       this is a good case for adding in an Assert
+          coeffs = polyfit(xvals, yvals, 3);
+
+          // Using the coefficients of the polynomial find the cross track error
+          // At the origin of the car
+          // NOTE: Cross track error is calculated along the 'y' direction
+          double cte = polyeval(coeffs, 0) - 0;
+
+          // Calculate the orientation error
+          // NOTE 1: The desired orientation is calculated as f'(x)
+          //       The polynomial, f(x):
+          //       coeffs[0] + coeffs[1] * x + coeffs[2] * x^2 + coeffs[3] * x^3
+          //       The derivative, f'(x):
+          //       coeffs[1] + 2 * coeffs[2] * x + 3 * coeffs[3] * x^2
+          // NOTE 2: Due to psi starting at 0 the orientation error is -f'(x).
+          // NOTE 3: Since the initial state is (0, 0) the only non-zero term
+          //         remaining is coeffs[1]
+          double epsi = -CppAD::atan(coeffs[1]);
+
+          // Set up the state vector
+          state << 0, 0, 0, v, cte, epsi;
+
+          // Calculate the new state
+          mpc_output vars = mpc.Solve(state, coeffs);
+
+          // Set up the steering and throttle values
+          // NOTE: Both are in between [-1, 1] for the simulator
+          steer_value = vars.steer_angle;
+          throttle_value = vars.throttle;
+
+          // Display the MPC predicted trajectory
+          vector<double> mpc_x_vals = vars.pred_x_vals;
+          vector<double> mpc_y_vals = vars.pred_y_vals;
+
+          // Display the waypoints/reference line
+          // NOTE: The way point where the car is currently is not displayed because
+          //       it leads to a reference line being drawn behind the car as well
+          //       in the simulator
+          vector<double> next_x_vals(xvals.data() + 1, xvals.data() + xvals.size() - 1);
+          vector<double> next_y_vals(yvals.data() + 1, yvals.data() + yvals.size() - 1);
+
+          // Set count back to 1
+          mpc_prev_state.run_mpc_counter = 1;
+          mpc_prev_state.steer_value = steer_value;
+          mpc_prev_state.throttle_value = throttle_value;
+          mpc_prev_state.mpc_x_vals = mpc_x_vals;
+          mpc_prev_state.mpc_y_vals = mpc_y_vals;
+          mpc_prev_state.next_x_vals = next_x_vals;
+          mpc_prev_state.next_y_vals = next_y_vals;
 
           json msgJson;
           // NOTE: Divide by deg2rad(20) before you send the steering value back.
