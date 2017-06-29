@@ -146,12 +146,14 @@ Model predictive control is a simple algorithm which is driven mainly by the cos
 To account for the latency in actuation, I used the vehicle model(as detailed above) to predict the state after 100ms and used that as the initial state for the MPC algorithm.
 
 > **NOTE:**
-Since the latency is in seconds, the reference and the state velocity were converted from mph to m/s. 
+Since the latency is in seconds, the reference and the state velocity were converted from mph to m/s.
 
 ### Cost Components
 The cost function is the sum of square of 7 error components at each time step `'N'` of the prediction horizon `'T'` . Each of these components have a weight multiplied, signifying their impact in finding the optimal solution (using IPOPT) for this non-linear problem. The cost function with the 7 components is defined as follows:
 
-\[\sum_{t=1}^{N} w_{cte} * cte_t^2 + w_{epsi} * epsi_t^2 + w_{v} * (v_t - v_{ref})^2 + w_{delta} * delta_t^2 + w_{a} * a_t^2 + w_{deltime} * (delta_t - delta_{t-1})^2 + w_{atime} * (a_t - a_{t-1})^2\]
+<p align="center">
+   <img src="data/images/EquationsSet3.gif">
+</p>
 
 ### Tuning weights
 MPC tunes steering angle and throttle to reduce cross track error(cte) and maintain low cte with respect to a reference track. If one puts their driving hat on, and tries to follow a lane as accurately as possible, they would try modify the steering angle to reduce the heading angle with respect to the reference lane. And this process of thought can be applied to the weight tuning as well.
