@@ -81,6 +81,9 @@ int main(int argc, char** argv)
     }
   }
 
+  // Convert reference velocity into m/s because the latency is in seconds
+  ref_v = ref_v * 0.447;
+
   // The configuration is loaded from a constant object of the same type
   loaded_config = config_default;
 
@@ -109,6 +112,9 @@ int main(int argc, char** argv)
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+
+          // Convert velocity to m/s
+          v = v * 0.447;
 
           // Variables for setting steeting value and throttle
           double steer_value;
