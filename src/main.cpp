@@ -125,7 +125,7 @@ int main(int argc, char** argv)
           Eigen::VectorXd yvals(ptsy.size());
 
           // Copy the data into Eigen vectors after converting to car-cordinates
-          // NOTE: Great visualization in this link: http://bit.ly/2ptq4IX
+          // NOTE: Great visualization in this link: http://bit.ly/2wxuApz
           for(size_t index = 0; index < ptsx.size(); index++)
           {
             xvals[index] = (ptsx[index] - px) * cos(psi) + (ptsy[index] - py) * sin(psi);
@@ -184,8 +184,9 @@ int main(int argc, char** argv)
           vector<double> next_x_vals(xvals.data() + 1, xvals.data() + xvals.size() - 1);
           vector<double> next_y_vals(yvals.data() + 1, yvals.data() + yvals.size() - 1);
 
-          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Yellow line
+          //.. add (x,y) points to list here, points are in reference to the
+          // vehicle's coordinate system the points in the simulator are
+          // connected by a Yellow line
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
